@@ -38,7 +38,7 @@ function deriveDisplayName(container: Element, anchor: HTMLAnchorElement): strin
 
 export function detectAccountIdentity(document: Document): AccountIdentityResult {
   const identities = new Map<string, AccountIdentity>();
-  const regions = document.querySelectorAll("header, nav");
+  const regions = document.querySelectorAll("header, nav, [role='menu']");
 
   for (const region of regions) {
     const containers = [region, ...region.querySelectorAll("[aria-label], [title], a, button, [role='button']")]

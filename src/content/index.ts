@@ -20,10 +20,12 @@ type CollectorRunner = (
   signal: AbortSignal,
 ) => Promise<CollectorOutcome>;
 
+type AccountResolver = () => AccountIdentityResult | Promise<AccountIdentityResult>;
+
 export function createContentController(
   adapter: ContentControllerAdapter,
   runner: CollectorRunner = runCollector,
-  resolveAccount: () => AccountIdentityResult = () => detectAccountIdentity(document),
+  resolveAccount: AccountResolver = () => detectAccountIdentity(document),
 ) {
   let controller: AbortController | null = null;
   const stop = (reason: Extract<StopReason, "user" | "hidden-tab"> = "user") => {
@@ -35,7 +37,7 @@ export function createContentController(
     stop,
     async handle(message: ExtensionMessage): Promise<ExtensionResponse> {
       if (message.type === "RESOLVE_ACCOUNT") {
-        const result = resolveAccount();
+        const result = await resolveAccount();
         return result.identity
           ? { ok: true, data: result.identity }
           : {
@@ -102,6 +104,25 @@ export function createContentController(
   };
 }
 
+async function resolveBrowserAccount(): Promise<AccountIdentityResult> {
+  const immediate = detectAccountIdentity(document);
+  if (immediate.identity || !document.querySelector("header, nav")) {
+    return immediate;
+  }
+
+  const meButton = [...document.querySelectorAll<HTMLButtonElement>("header button, nav button")]
+    .find((button) => /^.*\bme\b.*$/i.test(button.textContent?.replace(/\s+/g, " ").trim() ?? ""));
+  if (!meButton) return immediate;
+
+  meButton.click();
+  await new Promise((resolve) => window.setTimeout(resolve, 250));
+  const opened = detectAccountIdentity(document);
+  if (meButton.getAttribute("aria-expanded") === "true") {
+    meButton.click();
+  }
+  return opened;
+}
+
 function createBrowserAdapter(): ContentControllerAdapter {
   return {
     now: () => Date.now(),
@@ -160,7 +181,7 @@ function createBrowserAdapter(): ContentControllerAdapter {
 }
 
 if (typeof chrome !== "undefined" && chrome.runtime?.onMessage) {
-  const controller = createContentController(createBrowserAdapter());
+  const controller = createContentController(createBrowserAdapter(), undefined, resolveBrowserAccount);
   chrome.runtime.onMessage.addListener((message: ExtensionMessage, _sender, sendResponse) => {
     if (!["RESOLVE_ACCOUNT", "START_COLLECTION_CONTEXT", "STOP_COLLECTION", "SCAN_VISIBLE_CONTEXT"].includes(message.type)) {
       return false;
