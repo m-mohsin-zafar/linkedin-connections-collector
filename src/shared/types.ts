@@ -79,6 +79,7 @@ export interface AccountDataset extends AccountIdentity {
 export interface CollectionContext {
   account: AccountIdentity;
   previousCursor: string | null;
+  resumeFromVisible?: boolean;
 }
 
 export interface ExtensionSnapshot {
@@ -107,6 +108,7 @@ export type ExtensionErrorCode =
 export type ExtensionMessage =
   | { type: "GET_SNAPSHOT" }
   | { type: "START_COLLECTION"; settings: CollectorSettings }
+  | { type: "CONTINUE_COLLECTION"; settings: CollectorSettings }
   | { type: "STOP_COLLECTION" }
   | { type: "SCAN_VISIBLE" }
   | { type: "CLEAR_DATA" }

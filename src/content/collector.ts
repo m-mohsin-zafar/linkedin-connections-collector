@@ -86,7 +86,7 @@ export async function runCollector(
   context: CollectionContext,
   signal: AbortSignal,
 ): Promise<CollectorOutcome> {
-  const { account, previousCursor } = context;
+  const { account, previousCursor, resumeFromVisible = false } = context;
   const startedAt = adapter.now();
   let noGrowthCycles = 0;
   let failureRatioCycles = 0;
@@ -100,7 +100,9 @@ export async function runCollector(
     addedThisRun: 0,
     duplicates: 0,
     parseFailures: 0,
-    message: previousCursor
+    message: resumeFromVisible
+      ? "Continuing from the current visible connections…"
+      : previousCursor
       ? "Refreshing connections until the saved marker…"
       : "Collecting rendered connections…",
     startedAt: new Date(startedAt).toISOString(),
@@ -143,7 +145,7 @@ export async function runCollector(
       await adapter.updateRun(account.accountKey, { parseFailures });
 
       if (previousCursor && containsCursor(parsed.candidates, previousCursor)) {
-        if (candidateCursor) {
+        if (candidateCursor && !resumeFromVisible) {
           await adapter.promoteCursor(
             account.accountKey,
             candidateCursor,
@@ -169,10 +171,10 @@ export async function runCollector(
       const grew = await adapter.waitForGrowth(previousHeight, settings.renderTimeoutMs);
       noGrowthCycles = !grew && ingest.added === 0 ? noGrowthCycles + 1 : 0;
       if (noGrowthCycles >= settings.maxNoGrowthCycles) {
-        if (previousCursor) {
+        if (previousCursor && !resumeFromVisible) {
           return await finish(adapter, account.accountKey, "cursor-not-found");
         }
-        if (candidateCursor) {
+        if (candidateCursor && !resumeFromVisible) {
           await adapter.promoteCursor(
             account.accountKey,
             candidateCursor,

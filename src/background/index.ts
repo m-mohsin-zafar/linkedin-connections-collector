@@ -117,6 +117,21 @@ export function createMessageHandler(dependencies: BackgroundDependencies) {
           });
         }
 
+        case "CONTINUE_COLLECTION": {
+          const resolved = await activeAccount();
+          if ("ok" in resolved) return resolved;
+          const snapshot = await dependencies.repository.getSnapshot(resolved.account);
+          return await dependencies.sendToTab(resolved.tabId, {
+            type: "START_COLLECTION_CONTEXT",
+            settings: message.settings,
+            context: {
+              account: resolved.account,
+              previousCursor: snapshot.refreshCursor ?? null,
+              resumeFromVisible: true,
+            },
+          });
+        }
+
         case "SCAN_VISIBLE": {
           const resolved = await activeAccount();
           if ("ok" in resolved) return resolved;

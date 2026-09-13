@@ -35,7 +35,7 @@ beforeEach(() => {
     '<strong data-duplicates></strong><strong data-failures></strong>',
     '<input data-max-records value="1000">',
     '<input data-max-minutes value="30">',
-    '<button data-start></button><button data-stop hidden></button>',
+    '<button data-start></button><button data-continue hidden></button><button data-stop hidden></button>',
     '<button data-scan></button><button data-export-csv></button>',
     '<button data-export-json></button><button data-clear></button>',
   ].join("");
@@ -72,6 +72,22 @@ describe("renderSnapshot", () => {
     expect(document.querySelector("[data-mode]")?.textContent).toBe("Initial collection");
     expect(document.querySelector("[data-last-refresh]")?.textContent).toBe("Never");
     expect(document.querySelector("[data-start]")?.textContent).toBe("Start collecting");
+  });
+
+  it("offers a visible-region continuation after a blocked run", () => {
+    renderSnapshot(document.body, {
+      ...snapshot,
+      run: {
+        ...snapshot.run,
+        state: "blocked",
+        stopReason: "cursor-not-found",
+        message: "The previous refresh marker was not found.",
+      },
+    });
+
+    const button = document.querySelector("[data-continue]") as HTMLButtonElement;
+    expect(button.hidden).toBe(false);
+    expect(button.textContent).toBe("Continue from here");
   });
 
   it("disables export and clear actions when there are no records", () => {
