@@ -1,35 +1,29 @@
 import type {
+  AccountIdentityResult,
+  CollectionContext,
   ExtensionMessage,
   ExtensionResponse,
   MergeResult,
   RunState,
   StopReason,
 } from "../shared/types";
-import {
-  runCollector,
-  type CollectorAdapter,
-  type CollectorOutcome,
-} from "./collector";
-import {
-  detectCheckpoint,
-  isSupportedConnectionsPage,
-  parseConnectionCards,
-} from "./parser";
+import { detectAccountIdentity } from "./account";
+import { runCollector, type CollectorAdapter, type CollectorOutcome } from "./collector";
+import { detectCheckpoint, isSupportedConnectionsPage, parseConnectionCards } from "./parser";
 
 export type ContentControllerAdapter = CollectorAdapter;
 
 type CollectorRunner = (
   adapter: CollectorAdapter,
-  settings: Extract<
-    ExtensionMessage,
-    { type: "START_COLLECTION" }
-  >["settings"],
+  settings: Extract<ExtensionMessage, { type: "START_COLLECTION_CONTEXT" }>["settings"],
+  context: CollectionContext,
   signal: AbortSignal,
 ) => Promise<CollectorOutcome>;
 
 export function createContentController(
   adapter: ContentControllerAdapter,
   runner: CollectorRunner = runCollector,
+  resolveAccount: () => AccountIdentityResult = () => detectAccountIdentity(document),
 ) {
   let controller: AbortController | null = null;
   const stop = (reason: Extract<StopReason, "user" | "hidden-tab"> = "user") => {
@@ -40,10 +34,23 @@ export function createContentController(
   return {
     stop,
     async handle(message: ExtensionMessage): Promise<ExtensionResponse> {
-      if (message.type === "START_COLLECTION") {
+      if (message.type === "RESOLVE_ACCOUNT") {
+        const result = resolveAccount();
+        return result.identity
+          ? { ok: true, data: result.identity }
+          : {
+              ok: false,
+              error: {
+                code: "account",
+                message: result.reason ?? "The signed-in LinkedIn account could not be identified.",
+              },
+            };
+      }
+
+      if (message.type === "START_COLLECTION_CONTEXT") {
         stop("user");
         controller = new AbortController();
-        void runner(adapter, message.settings, controller.signal);
+        void runner(adapter, message.settings, message.context, controller.signal);
         return { ok: true };
       }
 
@@ -52,36 +59,33 @@ export function createContentController(
         return { ok: true };
       }
 
-      if (message.type === "SCAN_VISIBLE") {
-        if (!adapter.isVisible()) {
+      if (message.type === "SCAN_VISIBLE_CONTEXT") {
+        if (!adapter.isVisible() || !adapter.isSupported()) {
           return {
             ok: false,
             error: {
               code: "unsupported-page",
-              message: "Keep the Connections tab visible while scanning.",
+              message: "Keep LinkedIn's Connections page visible while scanning.",
             },
           };
         }
-        if (!adapter.isSupported()) {
+        if (adapter.currentAccountKey() !== message.account.accountKey) {
           return {
             ok: false,
             error: {
-              code: "unsupported-page",
-              message: "Open LinkedIn's Connections page before scanning.",
+              code: "account",
+              message: "The signed-in LinkedIn account changed before the scan.",
             },
           };
         }
         const checkpoint = adapter.checkpoint();
         if (checkpoint) {
-          return {
-            ok: false,
-            error: { code: "checkpoint", message: checkpoint },
-          };
+          return { ok: false, error: { code: "checkpoint", message: checkpoint } };
         }
 
         const parsed = await adapter.scan();
-        const result = await adapter.ingest(parsed.candidates);
-        await adapter.updateRun({
+        const result = await adapter.ingest(message.account.accountKey, parsed.candidates);
+        await adapter.updateRun(message.account.accountKey, {
           state: "completed",
           parseFailures: parsed.failures,
           message: "Visible connections scanned.",
@@ -92,10 +96,7 @@ export function createContentController(
 
       return {
         ok: false,
-        error: {
-          code: "unexpected",
-          message: "This command is not handled by the page collector.",
-        },
+        error: { code: "unexpected", message: "This command is not handled by the page collector." },
       };
     },
   };
@@ -107,24 +108,20 @@ function createBrowserAdapter(): ContentControllerAdapter {
     isVisible: () => document.visibilityState === "visible",
     isSupported: () => isSupportedConnectionsPage(window.location),
     checkpoint: () => detectCheckpoint(document),
+    currentAccountKey: () => detectAccountIdentity(document).identity?.accountKey ?? null,
     scan: async () => parseConnectionCards(document),
-    ingest: async (candidates) => {
+    ingest: async (accountKey, candidates) => {
       const response = (await chrome.runtime.sendMessage({
         type: "INGEST_RECORDS",
+        accountKey,
         candidates,
       } satisfies ExtensionMessage)) as ExtensionResponse;
       if (!response.ok) throw new Error(response.error.message);
       const result = response.data as MergeResult;
-      return {
-        added: result.added,
-        duplicates: result.duplicates,
-        totalUnique: result.records.length,
-      };
+      return { added: result.added, duplicates: result.duplicates, totalUnique: result.records.length };
     },
     documentHeight: () => document.documentElement.scrollHeight,
-    scrollByViewport: () => {
-      window.scrollBy({ top: window.innerHeight * 0.8, behavior: "auto" });
-    },
+    scrollByViewport: () => window.scrollBy({ top: window.innerHeight * 0.8, behavior: "auto" }),
     waitForGrowth: (previousHeight, timeoutMs) =>
       new Promise<boolean>((resolve) => {
         let settled = false;
@@ -137,30 +134,25 @@ function createBrowserAdapter(): ContentControllerAdapter {
         };
         const observer = new MutationObserver((mutations) => {
           const addedContent = mutations.some((mutation) =>
-            [...mutation.addedNodes].some(
-              (node) => node.nodeType === Node.ELEMENT_NODE,
-            ),
+            [...mutation.addedNodes].some((node) => node.nodeType === Node.ELEMENT_NODE),
           );
-          if (
-            addedContent ||
-            document.documentElement.scrollHeight > previousHeight
-          ) {
-            finish(true);
-          }
+          if (addedContent || document.documentElement.scrollHeight > previousHeight) finish(true);
         });
         observer.observe(document.body, { childList: true, subtree: true });
         const timeout = window.setTimeout(
-          () =>
-            finish(
-              document.documentElement.scrollHeight > previousHeight,
-            ),
+          () => finish(document.documentElement.scrollHeight > previousHeight),
           timeoutMs,
         );
       }),
-    updateRun: async (patch: Partial<RunState>) => {
+    updateRun: async (accountKey: string, patch: Partial<RunState>) => {
       const response = (await chrome.runtime.sendMessage({
-        type: "UPDATE_RUN",
-        patch,
+        type: "UPDATE_RUN", accountKey, patch,
+      } satisfies ExtensionMessage)) as ExtensionResponse;
+      if (!response.ok) throw new Error(response.error.message);
+    },
+    promoteCursor: async (accountKey, cursor, completedAt) => {
+      const response = (await chrome.runtime.sendMessage({
+        type: "PROMOTE_CURSOR", accountKey, cursor, completedAt,
       } satisfies ExtensionMessage)) as ExtensionResponse;
       if (!response.ok) throw new Error(response.error.message);
     },
@@ -169,22 +161,14 @@ function createBrowserAdapter(): ContentControllerAdapter {
 
 if (typeof chrome !== "undefined" && chrome.runtime?.onMessage) {
   const controller = createContentController(createBrowserAdapter());
-  chrome.runtime.onMessage.addListener(
-    (message: ExtensionMessage, _sender, sendResponse) => {
-      if (
-        message.type !== "START_COLLECTION" &&
-        message.type !== "STOP_COLLECTION" &&
-        message.type !== "SCAN_VISIBLE"
-      ) {
-        return false;
-      }
-      void controller.handle(message).then(sendResponse);
-      return true;
-    },
-  );
-  document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState !== "visible") {
-      controller.stop("hidden-tab");
+  chrome.runtime.onMessage.addListener((message: ExtensionMessage, _sender, sendResponse) => {
+    if (!["RESOLVE_ACCOUNT", "START_COLLECTION_CONTEXT", "STOP_COLLECTION", "SCAN_VISIBLE_CONTEXT"].includes(message.type)) {
+      return false;
     }
+    void controller.handle(message).then(sendResponse);
+    return true;
+  });
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState !== "visible") controller.stop("hidden-tab");
   });
 }

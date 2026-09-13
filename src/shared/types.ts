@@ -97,6 +97,7 @@ export interface ParseResult {
 
 export type ExtensionErrorCode =
   | "unsupported-page"
+  | "account"
   | "checkpoint"
   | "storage"
   | "parse"
@@ -111,8 +112,25 @@ export type ExtensionMessage =
   | { type: "CLEAR_DATA" }
   | { type: "EXPORT_CSV" }
   | { type: "EXPORT_JSON" }
-  | { type: "INGEST_RECORDS"; candidates: ConnectionCandidate[] }
-  | { type: "UPDATE_RUN"; patch: Partial<RunState> };
+  | { type: "RESOLVE_ACCOUNT" }
+  | {
+      type: "START_COLLECTION_CONTEXT";
+      settings: CollectorSettings;
+      context: CollectionContext;
+    }
+  | { type: "SCAN_VISIBLE_CONTEXT"; account: AccountIdentity }
+  | {
+      type: "INGEST_RECORDS";
+      accountKey: string;
+      candidates: ConnectionCandidate[];
+    }
+  | { type: "UPDATE_RUN"; accountKey: string; patch: Partial<RunState> }
+  | {
+      type: "PROMOTE_CURSOR";
+      accountKey: string;
+      cursor: string;
+      completedAt: string;
+    };
 
 export type ExtensionResponse =
   | { ok: true; data?: unknown }
