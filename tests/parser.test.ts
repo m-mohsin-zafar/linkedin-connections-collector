@@ -74,6 +74,20 @@ describe("parseConnectionCards", () => {
     expect(result.candidates).toHaveLength(1);
   });
 
+  it("uses the accessible duplicate when the first card link has no name", () => {
+    document.body.innerHTML = [
+      "<main><li>",
+      '<a href="/in/ada/"><img alt="" src="avatar.jpg"></a>',
+      '<a aria-label="Ada Lovelace profile" href="/in/ada/">Ada Lovelace</a>',
+      "<p>Engineer</p>",
+      "</li></main>",
+    ].join("");
+
+    const result = parseConnectionCards(document);
+    expect(result.candidates).toHaveLength(1);
+    expect(result.candidates[0]?.name).toBe("Ada Lovelace");
+  });
+
   it("ignores profile links outside the main connections content", () => {
     document.body.innerHTML = [
       '<nav><a href="/in/owner/">Owner</a></nav>',

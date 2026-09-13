@@ -111,7 +111,6 @@ export function parseConnectionCards(document: Document): ParseResult {
       continue;
     }
 
-    seen.add(slug);
     examined += 1;
     const container =
       node.closest("li, [role='listitem']") ?? node.parentElement ?? node;
@@ -120,6 +119,8 @@ export function parseConnectionCards(document: Document): ParseResult {
       failures += 1;
       continue;
     }
+
+    seen.add(slug);
 
     candidates.push({
       name,
