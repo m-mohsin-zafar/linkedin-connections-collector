@@ -86,6 +86,7 @@ describe("parseConnectionCards", () => {
     const result = parseConnectionCards(document);
     expect(result.candidates).toHaveLength(1);
     expect(result.candidates[0]?.name).toBe("Ada Lovelace");
+    expect(result.failures).toBe(0);
   });
 
   it("ignores profile links outside the main connections content", () => {

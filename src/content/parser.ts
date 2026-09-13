@@ -114,7 +114,16 @@ export function parseConnectionCards(document: Document): ParseResult {
     examined += 1;
     const container =
       node.closest("li, [role='listitem']") ?? node.parentElement ?? node;
-    const name = deriveName(node);
+    let sourceAnchor = node;
+    let name = deriveName(sourceAnchor);
+    if (!name) {
+      const duplicate = [...container.querySelectorAll<HTMLAnchorElement>("a[href]")]
+        .find((candidate) => memberSlug(candidate.getAttribute("href") ?? "") === slug && deriveName(candidate));
+      if (duplicate) {
+        sourceAnchor = duplicate;
+        name = deriveName(sourceAnchor);
+      }
+    }
     if (!name) {
       failures += 1;
       continue;
@@ -125,7 +134,7 @@ export function parseConnectionCards(document: Document): ParseResult {
     candidates.push({
       name,
       headline: deriveHeadline(container, name),
-      profileUrl: new URL(href, "https://www.linkedin.com").href,
+      profileUrl: new URL(sourceAnchor.getAttribute("href") ?? href, "https://www.linkedin.com").href,
       connectedOn: deriveConnectedOn(container),
     });
   }
