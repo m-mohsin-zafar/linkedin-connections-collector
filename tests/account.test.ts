@@ -48,4 +48,15 @@ describe("detectSignedInAccount", () => {
       reason: "Multiple signed-in LinkedIn profiles were found in the navigation",
     });
   });
+
+  it("reads the profile link from an opened account menu", () => {
+    document.body.innerHTML = [
+      '<nav><button aria-label="Muhammad Mohsin Zafar Me">Me</button></nav>',
+      '<div role="menu"><a href="/in/muhammad-mohsin-zafar/"><span>View profile</span></a></div>',
+    ].join("");
+    expect(detectSignedInAccount(document).identity).toEqual({
+      accountKey: "https://www.linkedin.com/in/muhammad-mohsin-zafar",
+      displayName: null,
+    });
+  });
 });

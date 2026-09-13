@@ -41,6 +41,18 @@ export function detectAccountIdentity(document: Document): AccountIdentityResult
   const regions = document.querySelectorAll("header, nav, [role='menu']");
 
   for (const region of regions) {
+    if (region.matches("[role='menu']")) {
+      for (const anchor of region.querySelectorAll<HTMLAnchorElement>("a[href]")) {
+        const accountKey = canonicalizeProfileUrl(anchor.getAttribute("href") ?? anchor.href);
+        if (accountKey) {
+          identities.set(accountKey, {
+            accountKey,
+            displayName: deriveDisplayName(region, anchor),
+          });
+        }
+      }
+      continue;
+    }
     const containers = [region, ...region.querySelectorAll("[aria-label], [title], a, button, [role='button']")]
       .filter(isMeContainer);
 
