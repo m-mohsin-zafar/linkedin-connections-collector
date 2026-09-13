@@ -1,0 +1,26 @@
+{
+  "manifest_version": 3,
+  "name": "LinkedIn Connections Collector",
+  "version": "0.1.0",
+  "description": "Collect and export connection details already rendered on your LinkedIn Connections page.",
+  "permissions": ["storage", "downloads", "activeTab"],
+  "host_permissions": [
+    "https://www.linkedin.com/mynetwork/invite-connect/connections/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "Connections Collector",
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.linkedin.com/mynetwork/invite-connect/connections/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

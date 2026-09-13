@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Connections Collector</title>
+    <link rel="stylesheet" href="popup.css">
+  </head>
+  <body>
+    <main class="app">
+      <header class="topbar">
+        <h1>Connections Collector</h1>
+        <span class="status" data-status data-state="idle">Idle</span>
+      </header>
+
+      <section class="summary" aria-label="Collection summary">
+        <div class="total">
+          <span>Stored</span>
+          <strong data-total>0</strong>
+        </div>
+        <dl class="metrics">
+          <div>
+            <dt>New this run</dt>
+            <dd data-added>0</dd>
+          </div>
+          <div>
+            <dt>Duplicates</dt>
+            <dd data-duplicates>0</dd>
+          </div>
+          <div>
+            <dt>Parse issues</dt>
+            <dd data-failures>0</dd>
+          </div>
+        </dl>
+      </section>
+
+      <p class="message" data-message aria-live="polite">
+        Ready to collect visible connection details.
+      </p>
+
+      <section class="limits" aria-label="Collection limits">
+        <label>
+          <span>Max records</span>
+          <input data-max-records type="number" min="1" max="20000" value="1000">
+        </label>
+        <label>
+          <span>Max minutes</span>
+          <input data-max-minutes type="number" min="1" max="240" value="30">
+        </label>
+      </section>
+
+      <section class="primary-actions" aria-label="Collection controls">
+        <button class="button button-primary" type="button" data-start>
+          Start collecting
+        </button>
+        <button class="button button-stop" type="button" data-stop hidden>
+          Stop collection
+        </button>
+        <button class="button button-secondary" type="button" data-scan>
+          Scan visible
+        </button>
+      </section>
+
+      <section class="export-actions" aria-label="Export collected data">
+        <button class="button button-secondary" type="button" data-export-csv disabled>
+          Export CSV
+        </button>
+        <button class="button button-secondary" type="button" data-export-json disabled>
+          Export JSON
+        </button>
+      </section>
+
+      <button class="clear-button" type="button" data-clear disabled>
+        Clear collected data
+      </button>
+
+      <footer>Your data stays on this device.</footer>
+    </main>
+    <script src="popup.js?v=0.1.0"></script>
+  </body>
+</html>

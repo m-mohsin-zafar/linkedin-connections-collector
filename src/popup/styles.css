@@ -1,0 +1,259 @@
+:root {
+  color-scheme: light;
+  font-family:
+    Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  color: #111827;
+  background: #ffffff;
+  font-synthesis: none;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  width: 360px;
+  margin: 0;
+  background: #ffffff;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+.app {
+  padding: 20px;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #dbe3ec;
+}
+
+h1 {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #526173;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.status::before {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #8a99aa;
+  content: "";
+}
+
+.status[data-state="collecting"]::before {
+  background: #0a66c2;
+}
+
+.status[data-state="completed"]::before {
+  background: #16875b;
+}
+
+.status[data-state="paused"]::before {
+  background: #b76e00;
+}
+
+.status[data-state="blocked"]::before {
+  background: #c9252d;
+}
+
+.summary {
+  padding: 18px 0 16px;
+  border-bottom: 1px solid #dbe3ec;
+}
+
+.total {
+  display: grid;
+  justify-items: center;
+  color: #526173;
+  font-size: 13px;
+}
+
+.total strong {
+  margin-top: 2px;
+  color: #111827;
+  font-size: 42px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin: 18px 0 0;
+}
+
+.metrics div {
+  min-width: 0;
+  padding: 0 8px;
+  text-align: center;
+}
+
+.metrics div + div {
+  border-left: 1px solid #dbe3ec;
+}
+
+.metrics dt {
+  min-height: 30px;
+  color: #526173;
+  font-size: 11px;
+  line-height: 1.3;
+}
+
+.metrics dd {
+  margin: 4px 0 0;
+  font-size: 19px;
+  font-weight: 720;
+  font-variant-numeric: tabular-nums;
+}
+
+.message {
+  min-height: 32px;
+  margin: 12px 0;
+  color: #526173;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.limits {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.limits label {
+  display: grid;
+  gap: 6px;
+  color: #344256;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.limits input {
+  width: 100%;
+  height: 40px;
+  padding: 0 10px;
+  color: #111827;
+  border: 1px solid #aebaca;
+  border-radius: 8px;
+  background: #ffffff;
+  font-variant-numeric: tabular-nums;
+}
+
+.primary-actions {
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.button {
+  min-height: 42px;
+  padding: 9px 12px;
+  border-radius: 9px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.button-primary {
+  color: #ffffff;
+  border: 1px solid #0a66c2;
+  background: #0a66c2;
+}
+
+.button-stop {
+  color: #ffffff;
+  border: 1px solid #b4232a;
+  background: #b4232a;
+}
+
+.button-secondary {
+  color: #172033;
+  border: 1px solid #aebaca;
+  background: #ffffff;
+}
+
+.export-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #dbe3ec;
+}
+
+.clear-button {
+  width: 100%;
+  margin-top: 14px;
+  padding: 8px;
+  color: #b4232a;
+  border: 0;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+footer {
+  margin-top: 12px;
+  padding-top: 12px;
+  color: #66758a;
+  border-top: 1px solid #dbe3ec;
+  font-size: 11px;
+  text-align: center;
+}
+
+button:hover:not(:disabled) {
+  filter: brightness(0.96);
+}
+
+button:focus-visible,
+input:focus-visible {
+  outline: 3px solid rgba(10, 102, 194, 0.28);
+  outline-offset: 2px;
+}
+
+button:disabled,
+input:disabled {
+  cursor: not-allowed;
+  opacity: 0.46;
+}
+
+button[hidden] {
+  display: none;
+}
+
+::selection {
+  color: #ffffff;
+  background: #0a66c2;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .button {
+    transition:
+      background-color 140ms ease-out,
+      border-color 140ms ease-out,
+      filter 140ms ease-out;
+  }
+}
