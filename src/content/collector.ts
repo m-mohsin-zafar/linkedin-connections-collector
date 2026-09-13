@@ -63,6 +63,18 @@ const OUTCOMES: Record<
     state: "completed",
     message: "No more rendered connections were found.",
   },
+  "up-to-date": {
+    state: "completed",
+    message: "All new connections have been collected.",
+  },
+  "cursor-not-found": {
+    state: "blocked",
+    message: "The previous refresh marker was not found.",
+  },
+  "account-changed": {
+    state: "blocked",
+    message: "The signed-in LinkedIn account changed during collection.",
+  },
   "parse-failure": {
     state: "blocked",
     message: "The page layout could not be read reliably.",

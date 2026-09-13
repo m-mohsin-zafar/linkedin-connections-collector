@@ -13,6 +13,16 @@ export interface ConnectionRecord {
   collectedAt: string;
 }
 
+export interface AccountIdentity {
+  accountKey: string;
+  displayName: string | null;
+}
+
+export interface AccountIdentityResult {
+  identity: AccountIdentity | null;
+  reason: string | null;
+}
+
 export interface MergeResult {
   records: ConnectionRecord[];
   added: number;
@@ -34,6 +44,9 @@ export type StopReason =
   | "unsupported-page"
   | "checkpoint"
   | "no-growth"
+  | "up-to-date"
+  | "cursor-not-found"
+  | "account-changed"
   | "parse-failure"
   | "unexpected";
 
@@ -56,8 +69,23 @@ export interface CollectorSettings {
   maxFailureRatioCycles: number;
 }
 
-export interface ExtensionSnapshot {
+export interface AccountDataset extends AccountIdentity {
   records: ConnectionRecord[];
+  refreshCursor: string | null;
+  lastCompletedAt: string | null;
+  run: RunState;
+}
+
+export interface CollectionContext {
+  account: AccountIdentity;
+  previousCursor: string | null;
+}
+
+export interface ExtensionSnapshot {
+  account?: AccountIdentity;
+  records: ConnectionRecord[];
+  refreshCursor?: string | null;
+  lastCompletedAt?: string | null;
   run: RunState;
 }
 
