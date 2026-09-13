@@ -135,6 +135,9 @@ async function resolveBrowserAccount(): Promise<AccountIdentityResult> {
 }
 
 function createBrowserAdapter(): ContentControllerAdapter {
+  const scrollContainer = (): HTMLElement | null =>
+    document.querySelector<HTMLElement>("main, [role='main']");
+
   return {
     now: () => Date.now(),
     isVisible: () => document.visibilityState === "visible",
@@ -152,8 +155,15 @@ function createBrowserAdapter(): ContentControllerAdapter {
       const result = response.data as MergeResult;
       return { added: result.added, duplicates: result.duplicates, totalUnique: result.records.length };
     },
-    documentHeight: () => document.documentElement.scrollHeight,
-    scrollByViewport: () => window.scrollBy({ top: window.innerHeight * 0.8, behavior: "auto" }),
+    documentHeight: () => scrollContainer()?.scrollHeight ?? document.documentElement.scrollHeight,
+    scrollByViewport: () => {
+      const container = scrollContainer();
+      if (container) {
+        container.scrollBy({ top: container.clientHeight * 0.8, behavior: "auto" });
+        return;
+      }
+      window.scrollBy({ top: window.innerHeight * 0.8, behavior: "auto" });
+    },
     waitForGrowth: (previousHeight, timeoutMs) =>
       new Promise<boolean>((resolve) => {
         let settled = false;
@@ -168,11 +178,11 @@ function createBrowserAdapter(): ContentControllerAdapter {
           const addedContent = mutations.some((mutation) =>
             [...mutation.addedNodes].some((node) => node.nodeType === Node.ELEMENT_NODE),
           );
-          if (addedContent || document.documentElement.scrollHeight > previousHeight) finish(true);
+          if (addedContent || (scrollContainer()?.scrollHeight ?? document.documentElement.scrollHeight) > previousHeight) finish(true);
         });
         observer.observe(document.body, { childList: true, subtree: true });
         const timeout = window.setTimeout(
-          () => finish(document.documentElement.scrollHeight > previousHeight),
+          () => finish((scrollContainer()?.scrollHeight ?? document.documentElement.scrollHeight) > previousHeight),
           timeoutMs,
         );
       }),
