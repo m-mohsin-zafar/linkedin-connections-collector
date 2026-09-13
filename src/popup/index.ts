@@ -28,6 +28,19 @@ export function renderSnapshot(
   snapshot: ExtensionSnapshot,
 ): void {
   const { run } = snapshot;
+  const hasCursor = Boolean(snapshot.refreshCursor);
+  element<HTMLElement>(root, "[data-account]").textContent =
+    snapshot.account?.displayName ?? snapshot.account?.accountKey ?? "Unknown account";
+  element<HTMLElement>(root, "[data-mode]").textContent = hasCursor
+    ? "Refresh mode"
+    : "Initial collection";
+  element<HTMLElement>(root, "[data-last-refresh]").textContent =
+    snapshot.lastCompletedAt
+      ? new Intl.DateTimeFormat(undefined, {
+          dateStyle: "medium",
+          timeStyle: "short",
+        }).format(new Date(snapshot.lastCompletedAt))
+      : "Never";
   element<HTMLElement>(root, "[data-status]").textContent =
     STATUS_LABELS[run.state];
   element<HTMLElement>(root, "[data-status]").dataset.state = run.state;
@@ -47,7 +60,9 @@ export function renderSnapshot(
   );
 
   const collecting = run.state === "collecting";
-  element<HTMLButtonElement>(root, "[data-start]").hidden = collecting;
+  const startButton = element<HTMLButtonElement>(root, "[data-start]");
+  startButton.textContent = hasCursor ? "Refresh connections" : "Start collecting";
+  startButton.hidden = collecting;
   element<HTMLButtonElement>(root, "[data-stop]").hidden = !collecting;
   element<HTMLButtonElement>(root, "[data-scan]").disabled = collecting;
   element<HTMLInputElement>(root, "[data-max-records]").disabled =
@@ -166,7 +181,7 @@ async function initializePopup(root: Document): Promise<void> {
   element<HTMLButtonElement>(root, "[data-clear]").addEventListener(
     "click",
     () => {
-      if (window.confirm("Clear every collected connection from this device?")) {
+      if (window.confirm("Clear collected connections for the current LinkedIn account?")) {
         void command({ type: "CLEAR_DATA" });
       }
     },

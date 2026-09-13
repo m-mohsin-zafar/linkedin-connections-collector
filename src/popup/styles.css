@@ -76,6 +76,47 @@ h1 {
   background: #c9252d;
 }
 
+.account-context {
+  padding: 14px 0;
+  border-bottom: 1px solid #dbe3ec;
+}
+
+.account-context > div {
+  display: grid;
+  gap: 3px;
+}
+
+.account-context span,
+.account-context dt {
+  color: #66758a;
+  font-size: 11px;
+}
+
+.account-context strong {
+  overflow: hidden;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-context dl {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 12px 0 0;
+}
+
+.account-context dl div {
+  min-width: 0;
+}
+
+.account-context dd {
+  margin: 3px 0 0;
+  color: #344256;
+  font-size: 12px;
+  font-weight: 650;
+}
+
 .summary {
   padding: 18px 0 16px;
   border-bottom: 1px solid #dbe3ec;

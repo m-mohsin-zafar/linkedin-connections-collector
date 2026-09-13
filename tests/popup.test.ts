@@ -7,7 +7,13 @@ import {
 import type { ExtensionSnapshot } from "../src/shared/types";
 
 const snapshot: ExtensionSnapshot = {
+  account: {
+    accountKey: "https://www.linkedin.com/in/owner",
+    displayName: "Owner",
+  },
   records: [],
+  refreshCursor: "https://www.linkedin.com/in/ada",
+  lastCompletedAt: "2026-09-12T12:00:00.000Z",
   run: {
     state: "collecting",
     totalUnique: 12,
@@ -23,6 +29,7 @@ const snapshot: ExtensionSnapshot = {
 beforeEach(() => {
   document.body.innerHTML = [
     '<span data-status></span><span data-message></span>',
+    '<strong data-account></strong><span data-mode></span><span data-last-refresh></span>',
     '<strong data-total></strong><strong data-added></strong>',
     '<strong data-duplicates></strong><strong data-failures></strong>',
     '<input data-max-records value="1000">',
@@ -42,12 +49,28 @@ describe("renderSnapshot", () => {
     );
     expect(document.querySelector("[data-total]")?.textContent).toBe("12");
     expect(document.querySelector("[data-added]")?.textContent).toBe("4");
+    expect(document.querySelector("[data-account]")?.textContent).toBe("Owner");
+    expect(document.querySelector("[data-mode]")?.textContent).toBe("Refresh mode");
+    expect(document.querySelector("[data-last-refresh]")?.textContent).not.toBe("Never");
+    expect(document.querySelector("[data-start]")?.textContent).toBe("Refresh connections");
     expect(
       (document.querySelector("[data-start]") as HTMLButtonElement).hidden,
     ).toBe(true);
     expect(
       (document.querySelector("[data-stop]") as HTMLButtonElement).hidden,
     ).toBe(false);
+  });
+
+  it("shows initial mode when the account has no saved cursor", () => {
+    renderSnapshot(document.body, {
+      ...snapshot,
+      refreshCursor: null,
+      lastCompletedAt: null,
+      run: { ...snapshot.run, state: "idle" },
+    });
+    expect(document.querySelector("[data-mode]")?.textContent).toBe("Initial collection");
+    expect(document.querySelector("[data-last-refresh]")?.textContent).toBe("Never");
+    expect(document.querySelector("[data-start]")?.textContent).toBe("Start collecting");
   });
 
   it("disables export and clear actions when there are no records", () => {
