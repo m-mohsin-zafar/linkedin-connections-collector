@@ -79,6 +79,15 @@ export function renderSnapshot(
     !hasRecords || collecting;
 }
 
+export function renderRecoverableNotice(
+  root: ParentNode,
+  message: string,
+): void {
+  element<HTMLElement>(root, "[data-status]").textContent = "Paused";
+  element<HTMLElement>(root, "[data-status]").dataset.state = "paused";
+  element<HTMLElement>(root, "[data-message]").textContent = message;
+}
+
 export function readCollectorSettings(
   root: ParentNode,
 ): CollectorSettings {
@@ -136,7 +145,12 @@ async function initializePopup(root: Document): Promise<void> {
         poll = null;
       }
     } catch (caught) {
-      showError(caught);
+      renderRecoverableNotice(
+        root,
+        caught instanceof Error
+          ? caught.message
+          : "Return to LinkedIn's Connections tab to continue.",
+      );
     }
   };
 

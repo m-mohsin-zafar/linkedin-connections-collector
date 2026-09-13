@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   readCollectorSettings,
+  renderRecoverableNotice,
   renderSnapshot,
   shouldInitializePopup,
 } from "../src/popup/index";
@@ -86,6 +87,19 @@ describe("renderSnapshot", () => {
     expect(
       (document.querySelector("[data-clear]") as HTMLButtonElement).disabled,
     ).toBe(true);
+  });
+});
+
+describe("renderRecoverableNotice", () => {
+  it("shows a paused notice without turning an active run into a blocked state", () => {
+    renderSnapshot(document.body, snapshot);
+    renderRecoverableNotice(document.body, "Return to the Connections tab to continue.");
+
+    expect(document.querySelector("[data-status]")?.textContent).toBe("Paused");
+    expect(document.querySelector("[data-status]")?.getAttribute("data-state")).toBe("paused");
+    expect(document.querySelector("[data-message]")?.textContent).toBe(
+      "Return to the Connections tab to continue.",
+    );
   });
 });
 
