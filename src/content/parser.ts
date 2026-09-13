@@ -99,8 +99,12 @@ export function parseConnectionCards(document: Document): ParseResult {
   const seen = new Set<string>();
   let failures = 0;
   let examined = 0;
+  const content = document.querySelector("main, [role='main']");
+  if (!content) {
+    return { candidates, failures, examined };
+  }
 
-  for (const node of document.querySelectorAll<HTMLAnchorElement>("a[href]")) {
+  for (const node of content.querySelectorAll<HTMLAnchorElement>("a[href]")) {
     const href = node.getAttribute("href") ?? "";
     const slug = memberSlug(href);
     if (!slug || seen.has(slug)) {

@@ -74,6 +74,17 @@ describe("parseConnectionCards", () => {
     expect(result.candidates).toHaveLength(1);
   });
 
+  it("ignores profile links outside the main connections content", () => {
+    document.body.innerHTML = [
+      '<nav><a href="/in/owner/">Owner</a></nav>',
+      '<main><li><a href="/in/ada/"><span aria-hidden="true">Ada</span></a></li></main>',
+    ].join("");
+
+    expect(parseConnectionCards(document).candidates.map((item) => item.name)).toEqual([
+      "Ada",
+    ]);
+  });
+
   it("counts a member card without a usable name as a failure", () => {
     document.body.innerHTML =
       '<main><li><a href="/in/unknown/"><span aria-hidden="true"></span></a></li></main>';
