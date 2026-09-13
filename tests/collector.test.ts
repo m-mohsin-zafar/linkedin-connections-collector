@@ -152,6 +152,21 @@ describe("runCollector", () => {
     expect(adapter.promotions).toEqual([]);
   });
 
+  it("does not persist more records than the configured limit", async () => {
+    const adapter = new FakeCollectorAdapter();
+    adapter.scans = [{ candidates: [ada, grace], failures: 0, examined: 2 }];
+
+    const result = await runCollector(
+      adapter,
+      { ...settings, maxRecords: 1 },
+      initialContext,
+      new AbortController().signal,
+    );
+
+    expect(result.stopReason).toBe("record-limit");
+    expect(adapter.ingested).toEqual([[ada]]);
+  });
+
   it("does not re-ingest the same visible profile on later scroll cycles", async () => {
     const adapter = new FakeCollectorAdapter();
     adapter.scans = [

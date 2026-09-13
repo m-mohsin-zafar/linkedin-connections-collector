@@ -91,6 +91,7 @@ export async function runCollector(
   let noGrowthCycles = 0;
   let failureRatioCycles = 0;
   let parseFailures = 0;
+  let addedThisRun = 0;
   let candidateCursor: string | null = null;
   const ingestedProfiles = new Set<string>();
 
@@ -133,7 +134,12 @@ export async function runCollector(
         ingestedProfiles.add(profileUrl);
         return true;
       });
-      const ingest = await adapter.ingest(account.accountKey, freshCandidates);
+      const remainingCapacity = Math.max(settings.maxRecords - addedThisRun, 0);
+      const ingest = await adapter.ingest(
+        account.accountKey,
+        freshCandidates.slice(0, remainingCapacity),
+      );
+      addedThisRun += ingest.added;
       await adapter.updateRun(account.accountKey, { parseFailures });
 
       if (previousCursor && containsCursor(parsed.candidates, previousCursor)) {
@@ -147,7 +153,7 @@ export async function runCollector(
         return await finish(adapter, account.accountKey, "up-to-date");
       }
 
-      if (ingest.totalUnique >= settings.maxRecords) {
+      if (addedThisRun >= settings.maxRecords) {
         return await finish(adapter, account.accountKey, "record-limit");
       }
 

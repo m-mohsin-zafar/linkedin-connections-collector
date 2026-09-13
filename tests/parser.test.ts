@@ -89,6 +89,31 @@ describe("parseConnectionCards", () => {
     expect(result.failures).toBe(0);
   });
 
+  it("separates name and headline from LinkedIn's current profile-link card", () => {
+    document.body.innerHTML = [
+      "<main>",
+      '<div class="connection-card">',
+      '<a href="/in/ada/"><img alt="Ada Lovelace profile picture"></a>',
+      '<a href="/in/ada/"><div><p>Ada Lovelace</p><div><p>Analytical Engine Builder</p></div></div></a>',
+      "<p>Connected on September 13, 2026</p>",
+      "</div>",
+      "</main>",
+    ].join("");
+
+    expect(parseConnectionCards(document)).toEqual({
+      candidates: [
+        {
+          name: "Ada Lovelace",
+          headline: "Analytical Engine Builder",
+          profileUrl: "https://www.linkedin.com/in/ada/",
+          connectedOn: "Connected on September 13, 2026",
+        },
+      ],
+      failures: 0,
+      examined: 1,
+    });
+  });
+
   it("ignores profile links outside the main connections content", () => {
     document.body.innerHTML = [
       '<nav><a href="/in/owner/">Owner</a></nav>',
