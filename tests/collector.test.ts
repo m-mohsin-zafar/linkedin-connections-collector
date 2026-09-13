@@ -152,6 +152,20 @@ describe("runCollector", () => {
     expect(adapter.promotions).toEqual([]);
   });
 
+  it("does not re-ingest the same visible profile on later scroll cycles", async () => {
+    const adapter = new FakeCollectorAdapter();
+    adapter.scans = [
+      { candidates: [ada], failures: 0, examined: 1 },
+      { candidates: [ada], failures: 0, examined: 1 },
+      { candidates: [], failures: 0, examined: 0 },
+      { candidates: [], failures: 0, examined: 0 },
+    ];
+    adapter.growth = [true, false, false, false];
+    const result = await runCollector(adapter, settings, initialContext, new AbortController().signal);
+    expect(result.stopReason).toBe("no-growth");
+    expect(adapter.ingested).toEqual([[ada], [], [], []]);
+  });
+
   it("blocks immediately for a checkpoint without scanning", async () => {
     const adapter = new FakeCollectorAdapter();
     adapter.checkpointMessage = "Verification checkpoint detected";

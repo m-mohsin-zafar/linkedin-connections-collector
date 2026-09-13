@@ -1,4 +1,5 @@
 import type {
+  AccountIdentity,
   AccountIdentityResult,
   CollectionContext,
   ExtensionMessage,
@@ -22,6 +23,8 @@ type CollectorRunner = (
 
 type AccountResolver = () => AccountIdentityResult | Promise<AccountIdentityResult>;
 
+let cachedAccountIdentity: AccountIdentity | null = null;
+
 export function createContentController(
   adapter: ContentControllerAdapter,
   runner: CollectorRunner = runCollector,
@@ -38,6 +41,7 @@ export function createContentController(
     async handle(message: ExtensionMessage): Promise<ExtensionResponse> {
       if (message.type === "RESOLVE_ACCOUNT") {
         const result = await resolveAccount();
+        if (result.identity) cachedAccountIdentity = result.identity;
         return result.identity
           ? { ok: true, data: result.identity }
           : {
@@ -105,6 +109,12 @@ export function createContentController(
 }
 
 async function resolveBrowserAccount(): Promise<AccountIdentityResult> {
+  if (cachedAccountIdentity) {
+    return {
+      identity: cachedAccountIdentity,
+      reason: null,
+    };
+  }
   const immediate = detectAccountIdentity(document);
   if (immediate.identity || !document.querySelector("header, nav")) {
     return immediate;
@@ -120,6 +130,7 @@ async function resolveBrowserAccount(): Promise<AccountIdentityResult> {
   if (meButton.getAttribute("aria-expanded") === "true") {
     meButton.click();
   }
+  if (opened.identity) cachedAccountIdentity = opened.identity;
   return opened;
 }
 
@@ -129,7 +140,7 @@ function createBrowserAdapter(): ContentControllerAdapter {
     isVisible: () => document.visibilityState === "visible",
     isSupported: () => isSupportedConnectionsPage(window.location),
     checkpoint: () => detectCheckpoint(document),
-    currentAccountKey: () => detectAccountIdentity(document).identity?.accountKey ?? null,
+    currentAccountKey: () => cachedAccountIdentity?.accountKey ?? detectAccountIdentity(document).identity?.accountKey ?? null,
     scan: async () => parseConnectionCards(document),
     ingest: async (accountKey, candidates) => {
       const response = (await chrome.runtime.sendMessage({

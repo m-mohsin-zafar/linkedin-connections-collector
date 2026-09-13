@@ -92,6 +92,7 @@ export async function runCollector(
   let failureRatioCycles = 0;
   let parseFailures = 0;
   let candidateCursor: string | null = null;
+  const ingestedProfiles = new Set<string>();
 
   await adapter.updateRun(account.accountKey, {
     state: "collecting",
@@ -126,7 +127,13 @@ export async function runCollector(
       const parsed = await adapter.scan();
       candidateCursor ??= firstCanonicalCandidate(parsed.candidates);
       parseFailures += parsed.failures;
-      const ingest = await adapter.ingest(account.accountKey, parsed.candidates);
+      const freshCandidates = parsed.candidates.filter((candidate) => {
+        const profileUrl = canonicalizeProfileUrl(candidate.profileUrl);
+        if (!profileUrl || ingestedProfiles.has(profileUrl)) return false;
+        ingestedProfiles.add(profileUrl);
+        return true;
+      });
+      const ingest = await adapter.ingest(account.accountKey, freshCandidates);
       await adapter.updateRun(account.accountKey, { parseFailures });
 
       if (previousCursor && containsCursor(parsed.candidates, previousCursor)) {
