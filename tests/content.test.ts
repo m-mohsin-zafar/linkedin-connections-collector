@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { createContentController, type ContentControllerAdapter } from "../src/content/index";
+import {
+  createContentController,
+  waitForElementGrowth,
+  type ContentControllerAdapter,
+} from "../src/content/index";
 import type { AccountIdentity, CollectionContext, ParseResult, RunState } from "../src/shared/types";
 
 const owner: AccountIdentity = {
@@ -30,6 +34,16 @@ function createAdapter(overrides: Partial<ContentControllerAdapter> = {}): Conte
 }
 
 describe("content controller", () => {
+  it("does not treat mutations outside the connections list as list growth", async () => {
+    const list = document.createElement("main");
+    document.body.append(list);
+
+    const growth = waitForElementGrowth(list, 1, 10);
+    document.body.append(document.createElement("aside"));
+
+    await expect(growth).resolves.toBe(false);
+  });
+
   it("returns the signed-in account identity", async () => {
     const controller = createContentController(createAdapter(), undefined, () => ({
       identity: owner,

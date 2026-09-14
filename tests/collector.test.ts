@@ -129,6 +129,32 @@ describe("runCollector", () => {
     expect(adapter.updates.at(-1)?.patch.state).toBe("blocked");
   });
 
+  it("continues from the current region without replacing the refresh cursor", async () => {
+    const adapter = new FakeCollectorAdapter();
+    adapter.scans = [
+      { candidates: [grace], failures: 0, examined: 1 },
+      { candidates: [], failures: 0, examined: 0 },
+      { candidates: [], failures: 0, examined: 0 },
+      { candidates: [], failures: 0, examined: 0 },
+    ];
+
+    const result = await runCollector(
+      adapter,
+      settings,
+      {
+        account: owner,
+        previousCursor: ada.profileUrl,
+        resumeFromVisible: true,
+      },
+      new AbortController().signal,
+    );
+
+    expect(result.stopReason).toBe("no-growth");
+    expect(adapter.ingested[0]).toEqual([grace]);
+    expect(adapter.promotions).toEqual([]);
+    expect(adapter.updates.at(-1)?.patch.state).toBe("completed");
+  });
+
   it("blocks before ingesting when the signed-in account changes", async () => {
     const adapter = new FakeCollectorAdapter();
     adapter.accountKey = "https://www.linkedin.com/in/someone-else";
@@ -150,6 +176,21 @@ describe("runCollector", () => {
     );
     expect(result.stopReason).toBe("record-limit");
     expect(adapter.promotions).toEqual([]);
+  });
+
+  it("does not persist more records than the configured limit", async () => {
+    const adapter = new FakeCollectorAdapter();
+    adapter.scans = [{ candidates: [ada, grace], failures: 0, examined: 2 }];
+
+    const result = await runCollector(
+      adapter,
+      { ...settings, maxRecords: 1 },
+      initialContext,
+      new AbortController().signal,
+    );
+
+    expect(result.stopReason).toBe("record-limit");
+    expect(adapter.ingested).toEqual([[ada]]);
   });
 
   it("does not re-ingest the same visible profile on later scroll cycles", async () => {

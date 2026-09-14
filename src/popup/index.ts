@@ -60,9 +60,17 @@ export function renderSnapshot(
   );
 
   const collecting = run.state === "collecting";
+  const stopReason = run.stopReason;
+  const canContinue =
+    !collecting &&
+    stopReason !== null &&
+    !["user", "no-growth", "up-to-date"].includes(stopReason);
   const startButton = element<HTMLButtonElement>(root, "[data-start]");
   startButton.textContent = hasCursor ? "Refresh connections" : "Start collecting";
   startButton.hidden = collecting;
+  const continueButton = element<HTMLButtonElement>(root, "[data-continue]");
+  continueButton.hidden = !canContinue;
+  continueButton.textContent = "Continue from here";
   element<HTMLButtonElement>(root, "[data-stop]").hidden = !collecting;
   element<HTMLButtonElement>(root, "[data-scan]").disabled = collecting;
   element<HTMLInputElement>(root, "[data-max-records]").disabled =
@@ -77,6 +85,15 @@ export function renderSnapshot(
     !hasRecords;
   element<HTMLButtonElement>(root, "[data-clear]").disabled =
     !hasRecords || collecting;
+}
+
+export function renderRecoverableNotice(
+  root: ParentNode,
+  message: string,
+): void {
+  element<HTMLElement>(root, "[data-status]").textContent = "Paused";
+  element<HTMLElement>(root, "[data-status]").dataset.state = "paused";
+  element<HTMLElement>(root, "[data-message]").textContent = message;
 }
 
 export function readCollectorSettings(
@@ -136,7 +153,12 @@ async function initializePopup(root: Document): Promise<void> {
         poll = null;
       }
     } catch (caught) {
-      showError(caught);
+      renderRecoverableNotice(
+        root,
+        caught instanceof Error
+          ? caught.message
+          : "Return to LinkedIn's Connections tab to continue.",
+      );
     }
   };
 
@@ -155,6 +177,19 @@ async function initializePopup(root: Document): Promise<void> {
       try {
         void command({
           type: "START_COLLECTION",
+          settings: readCollectorSettings(root),
+        });
+      } catch (caught) {
+        showError(caught);
+      }
+    },
+  );
+  element<HTMLButtonElement>(root, "[data-continue]").addEventListener(
+    "click",
+    () => {
+      try {
+        void command({
+          type: "CONTINUE_COLLECTION",
           settings: readCollectorSettings(root),
         });
       } catch (caught) {

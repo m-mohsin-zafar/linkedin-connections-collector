@@ -82,6 +82,26 @@ describe("background message handler", () => {
     });
   });
 
+  it("continues from the current visible LinkedIn region without clearing saved data", async () => {
+    await repository.promoteCursor(owner.accountKey, "https://www.linkedin.com/in/ada", "2026-09-12T00:00:00.000Z");
+    const message = {
+      type: "CONTINUE_COLLECTION" as const,
+      settings: { maxRecords: 100, maxDurationMs: 1000, renderTimeoutMs: 10, maxNoGrowthCycles: 3, maxFailureRatioCycles: 2 },
+    };
+
+    expect(await handler()(message)).toMatchObject({ ok: true });
+    expect(sendToTab).toHaveBeenLastCalledWith(7, {
+      type: "START_COLLECTION_CONTEXT",
+      settings: message.settings,
+      context: {
+        account: owner,
+        previousCursor: "https://www.linkedin.com/in/ada",
+        resumeFromVisible: true,
+      },
+    });
+    expect((await repository.getSnapshot(owner)).refreshCursor).toBe("https://www.linkedin.com/in/ada");
+  });
+
   it("routes a visible scan with the resolved account", async () => {
     await handler()({ type: "SCAN_VISIBLE" });
     expect(sendToTab).toHaveBeenLastCalledWith(7, {

@@ -64,6 +64,24 @@ function deriveName(anchor: HTMLAnchorElement): string {
   return /^view (?:profile|.+ profile)$/i.test(anchorText) ? "" : anchorText;
 }
 
+function deriveProfileFields(anchor: HTMLAnchorElement): {
+  name: string;
+  headline: string | null;
+} {
+  const paragraphTexts = [...anchor.querySelectorAll("p")]
+    .map((paragraph) => compactText(paragraph.textContent))
+    .filter(Boolean);
+
+  if (paragraphTexts.length >= 2) {
+    return {
+      name: paragraphTexts[0]!,
+      headline: paragraphTexts.slice(1).find(Boolean) ?? null,
+    };
+  }
+
+  return { name: deriveName(anchor), headline: null };
+}
+
 function deriveConnectedOn(container: Element): string | null {
   const timeText = compactText(container.querySelector("time")?.textContent);
   if (timeText) {
@@ -71,7 +89,7 @@ function deriveConnectedOn(container: Element): string | null {
   }
 
   const match = compactText(container.textContent).match(
-    /\bConnected\s+(?:on\s+)?[A-Z][^\n|•]{2,40}/i,
+    /Connected\s+(?:on\s+)?(?:[A-Z][a-z]+\s+\d{1,2},\s+\d{4}|[A-Z][a-z]+\s+\d{4})/i,
   );
   return match?.[0] ? compactText(match[0]) : null;
 }
@@ -115,15 +133,19 @@ export function parseConnectionCards(document: Document): ParseResult {
     const container =
       node.closest("li, [role='listitem']") ?? node.parentElement ?? node;
     let sourceAnchor = node;
-    let name = deriveName(sourceAnchor);
-    if (!name) {
+    let fields = deriveProfileFields(sourceAnchor);
+    if (!fields.name) {
       const duplicate = [...container.querySelectorAll<HTMLAnchorElement>("a[href]")]
-        .find((candidate) => memberSlug(candidate.getAttribute("href") ?? "") === slug && deriveName(candidate));
+        .find((candidate) => {
+          const candidateFields = deriveProfileFields(candidate);
+          return memberSlug(candidate.getAttribute("href") ?? "") === slug && Boolean(candidateFields.name);
+        });
       if (duplicate) {
         sourceAnchor = duplicate;
-        name = deriveName(sourceAnchor);
+        fields = deriveProfileFields(sourceAnchor);
       }
     }
+    const { name } = fields;
     if (!name) {
       failures += 1;
       continue;
@@ -133,7 +155,7 @@ export function parseConnectionCards(document: Document): ParseResult {
 
     candidates.push({
       name,
-      headline: deriveHeadline(container, name),
+      headline: fields.headline ?? deriveHeadline(container, name),
       profileUrl: new URL(sourceAnchor.getAttribute("href") ?? href, "https://www.linkedin.com").href,
       connectedOn: deriveConnectedOn(container),
     });

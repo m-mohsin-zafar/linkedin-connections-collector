@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   readCollectorSettings,
+  renderRecoverableNotice,
   renderSnapshot,
   shouldInitializePopup,
 } from "../src/popup/index";
@@ -34,7 +35,7 @@ beforeEach(() => {
     '<strong data-duplicates></strong><strong data-failures></strong>',
     '<input data-max-records value="1000">',
     '<input data-max-minutes value="30">',
-    '<button data-start></button><button data-stop hidden></button>',
+    '<button data-start></button><button data-continue hidden></button><button data-stop hidden></button>',
     '<button data-scan></button><button data-export-csv></button>',
     '<button data-export-json></button><button data-clear></button>',
   ].join("");
@@ -73,6 +74,22 @@ describe("renderSnapshot", () => {
     expect(document.querySelector("[data-start]")?.textContent).toBe("Start collecting");
   });
 
+  it("offers a visible-region continuation after a blocked run", () => {
+    renderSnapshot(document.body, {
+      ...snapshot,
+      run: {
+        ...snapshot.run,
+        state: "blocked",
+        stopReason: "cursor-not-found",
+        message: "The previous refresh marker was not found.",
+      },
+    });
+
+    const button = document.querySelector("[data-continue]") as HTMLButtonElement;
+    expect(button.hidden).toBe(false);
+    expect(button.textContent).toBe("Continue from here");
+  });
+
   it("disables export and clear actions when there are no records", () => {
     renderSnapshot(document.body, {
       ...snapshot,
@@ -86,6 +103,19 @@ describe("renderSnapshot", () => {
     expect(
       (document.querySelector("[data-clear]") as HTMLButtonElement).disabled,
     ).toBe(true);
+  });
+});
+
+describe("renderRecoverableNotice", () => {
+  it("shows a paused notice without turning an active run into a blocked state", () => {
+    renderSnapshot(document.body, snapshot);
+    renderRecoverableNotice(document.body, "Return to the Connections tab to continue.");
+
+    expect(document.querySelector("[data-status]")?.textContent).toBe("Paused");
+    expect(document.querySelector("[data-status]")?.getAttribute("data-state")).toBe("paused");
+    expect(document.querySelector("[data-message]")?.textContent).toBe(
+      "Return to the Connections tab to continue.",
+    );
   });
 });
 

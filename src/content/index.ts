@@ -25,6 +25,36 @@ type AccountResolver = () => AccountIdentityResult | Promise<AccountIdentityResu
 
 let cachedAccountIdentity: AccountIdentity | null = null;
 
+export function waitForElementGrowth(
+  root: HTMLElement | null,
+  previousHeight: number,
+  timeoutMs: number,
+): Promise<boolean> {
+  if (!root) return Promise.resolve(false);
+
+  return new Promise<boolean>((resolve) => {
+    let settled = false;
+    const finish = (grew: boolean) => {
+      if (settled) return;
+      settled = true;
+      observer.disconnect();
+      window.clearTimeout(timeout);
+      resolve(grew);
+    };
+    const observer = new MutationObserver((mutations) => {
+      const addedContent = mutations.some((mutation) =>
+        [...mutation.addedNodes].some((node) => node.nodeType === Node.ELEMENT_NODE),
+      );
+      if (addedContent || root.scrollHeight > previousHeight) finish(true);
+    });
+    observer.observe(root, { childList: true, subtree: true });
+    const timeout = window.setTimeout(
+      () => finish(root.scrollHeight > previousHeight),
+      timeoutMs,
+    );
+  });
+}
+
 export function createContentController(
   adapter: ContentControllerAdapter,
   runner: CollectorRunner = runCollector,
@@ -165,27 +195,7 @@ function createBrowserAdapter(): ContentControllerAdapter {
       window.scrollBy({ top: window.innerHeight * 0.8, behavior: "auto" });
     },
     waitForGrowth: (previousHeight, timeoutMs) =>
-      new Promise<boolean>((resolve) => {
-        let settled = false;
-        const finish = (grew: boolean) => {
-          if (settled) return;
-          settled = true;
-          observer.disconnect();
-          window.clearTimeout(timeout);
-          resolve(grew);
-        };
-        const observer = new MutationObserver((mutations) => {
-          const addedContent = mutations.some((mutation) =>
-            [...mutation.addedNodes].some((node) => node.nodeType === Node.ELEMENT_NODE),
-          );
-          if (addedContent || (scrollContainer()?.scrollHeight ?? document.documentElement.scrollHeight) > previousHeight) finish(true);
-        });
-        observer.observe(document.body, { childList: true, subtree: true });
-        const timeout = window.setTimeout(
-          () => finish((scrollContainer()?.scrollHeight ?? document.documentElement.scrollHeight) > previousHeight),
-          timeoutMs,
-        );
-      }),
+      waitForElementGrowth(scrollContainer(), previousHeight, timeoutMs),
     updateRun: async (accountKey: string, patch: Partial<RunState>) => {
       const response = (await chrome.runtime.sendMessage({
         type: "UPDATE_RUN", accountKey, patch,
